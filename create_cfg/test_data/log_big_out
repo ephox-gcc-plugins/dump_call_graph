@@ -1,0 +1,27 @@
+---------------- start: SyS_ioctl():fs/ioctl.c ----------------
+SyS_ioctl
+ fput
+ do_vfs_ioctl
+  file_ioctl
+   ioctl_preallocate
+    do_fallocate
+    memset
+  ioctl_fiemap
+   filemap_write_and_wait
+   _cond_resched
+   memset
+  ioctl_fsthaw
+   thaw_super
+   capable
+  ioctl_fsfreeze
+   freeze_super
+   capable
+  inode_get_bytes
+  ioctl_fioasync
+  ioctl_fionbio
+   _raw_spin_unlock
+   _raw_spin_lock
+  set_close_on_exec
+  set_close_on_exec
+ fget_light
+

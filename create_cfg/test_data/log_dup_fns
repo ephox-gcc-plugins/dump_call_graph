@@ -1,0 +1,6 @@
+DUMP_CFG:fn_1:fn_4:test.c
+DUMP_CFG:fn_4:fn_5:test.c
+DUMP_CFG:fn_1:fn_3:test.c
+DUMP_CFG:fn_1:fn_2:test.c
+DUMP_CFG:fn_4:fn_10:test_nyuszi.c
+DUMP_CFG:fn_1:fn_4:test_nyuszi.c
