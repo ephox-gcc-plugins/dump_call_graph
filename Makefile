@@ -13,14 +13,21 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 PLUGINCC := $(shell $(CONFIG_SHELL) gcc-plugin.sh "$(CC)" "$(CXX)" "$(CC)")
 
+ifeq ($(PLUGINCC),$(CC))
+PLUGIN_FLAGS := -I$(GCCPLUGINS_DIR)/include -std=gnu99
+else
+PLUGIN_FLAGS := -I$(GCCPLUGINS_DIR)/include -std=gnu++98 -fno-rtti -Wno-narrowing -Wno-unused-parameter
+endif
+
+PLUGIN_FLAGS += -fPIC -shared -O2 -ggdb -Wall -W
+
 all: $(PROG)
 
-$(PROG):
-	$(PLUGINCC) dump_call_graph_plugin.c $(PLUGIN_FLAGS) -o $@ $<
+$(PROG): dump_call_graph_plugin.c
+	$(PLUGINCC) $(PLUGIN_FLAGS) -o $@ $^
 
 run: $(PROG)
-	$(PLUGINCC) -fplugin=$(CURDIR)/$(PROG) test.c -o test
+	$(CC) -fplugin=$(CURDIR)/$(PROG) test.c -o test -O2
 
 clean:
-	$(RM) -f $(PROG)
-	$(RM) -f test
+	$(RM) -f $(PROG) test
