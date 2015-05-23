@@ -1,12 +1,12 @@
 /*
- * Copyright 2011-2014 by Emese Revfy <re.emese@gmail.com>
+ * Copyright 2011-2015 by Emese Revfy <re.emese@gmail.com>
  * Licensed under the GPL v2, or (at your option) v3
  *
  * Homepage:
  * http://www.grsecurity.net/~ephox/dump_call_graph_plugin/
  *
  * Usage:
- * $ make clean; make; make run &> result
+ * $ make clean; make run &> result
  * $ create_cfg/create_call_graph.py -l result -g test -o test.txt -n fn_1
  *
  * Example cfg (printk):
@@ -18,9 +18,35 @@
 int plugin_is_GPL_compatible;
 
 static struct plugin_info dump_call_graph_plugin_info = {
-	.version	= "20140415",
+	.version	= "20150523",
 	.help		= "dump cfg\n",
 };
+
+#if BUILDING_GCC_VERSION >= 5000
+typedef struct hash_set<const_tree> tree_set;
+
+static inline bool pointer_set_insert(tree_set *visited, const_tree node)
+{
+	return visited->add(node);
+}
+
+static inline bool pointer_set_contains(tree_set *visited, const_tree node)
+{
+	return visited->contains(node);
+}
+
+static inline tree_set* pointer_set_create(void)
+{
+	return new hash_set<const_tree>;
+}
+
+static inline void pointer_set_destroy(tree_set *visited)
+{
+	delete visited;
+}
+#else
+typedef struct pointer_set_t tree_set;
+#endif
 
 static void print_function(const_tree caller, const_tree callee)
 {
@@ -39,7 +65,7 @@ static void print_function(const_tree caller, const_tree callee)
 	fprintf(stderr, "DUMP_CFG:%s:%s:%s\n", caller_name, callee_name, xloc.file);
 }
 
-static void walk_functions(struct pointer_set_t *visited, const struct cgraph_node *node)
+static void walk_functions(tree_set *visited, const struct cgraph_node *node)
 {
 	struct cgraph_edge *e;
 	const_tree caller;
@@ -53,7 +79,7 @@ static void walk_functions(struct pointer_set_t *visited, const struct cgraph_no
 
 	for (e = node->callees; e; e = e->next_callee) {
 		const struct cgraph_node *next_node;
-		const_tree callee = gimple_call_fndecl(e->call_stmt);
+		tree callee = gimple_call_fndecl(e->call_stmt);
 
 		if (DECL_BUILT_IN(callee))
 			continue;
@@ -68,7 +94,7 @@ static void walk_functions(struct pointer_set_t *visited, const struct cgraph_no
 static unsigned int handle_functions(void)
 {
 	struct cgraph_node *node;
-	struct pointer_set_t *visited;
+	tree_set *visited;
 
 	visited = pointer_set_create();
 
@@ -93,7 +119,8 @@ static struct ipa_opt_pass_d dump_call_graph_plugin_pass = {
 #if BUILDING_GCC_VERSION >= 4008
 		.optinfo_flags		= OPTGROUP_NONE,
 #endif
-#if BUILDING_GCC_VERSION >= 4009
+#if BUILDING_GCC_VERSION >= 5000
+#elif BUILDING_GCC_VERSION >= 4009
 		.has_gate		= false,
 		.has_execute		= true,
 #else
@@ -127,22 +154,37 @@ static struct ipa_opt_pass_d dump_call_graph_plugin_pass = {
 
 #if BUILDING_GCC_VERSION >= 4009
 namespace {
-class dump_pass : public ipa_opt_pass_d {
+class dump_call_graph_plugin_pass : public ipa_opt_pass_d {
 public:
-	dump_call_graph_plugin_pass() : ipa_opt_pass_d(dump_call_graph_plugin_pass_data, g, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL) {}
-	unsigned int execute() { return dump_call_graph_plugin_functions(); }
+	dump_call_graph_plugin_pass() : ipa_opt_pass_d(dump_call_graph_plugin_pass_data,
+				g,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
+				0,
+				NULL,
+				NULL) {}
+#if BUILDING_GCC_VERSION >= 5000
+	virtual unsigned int execute(function *) { return handle_functions(); }
+#else
+	unsigned int execute() { return handle_functions(); }
+#endif
 };
 }
-#endif
 
-static struct opt_pass *make_dump_call_graph_plugin_pass(void)
+opt_pass *make_dump_call_graph_plugin_pass(void)
 {
-#if BUILDING_GCC_VERSION >= 4009
 	return new dump_call_graph_plugin_pass();
-#else
-	return &dump_call_graph_plugin_pass.pass;
-#endif
 }
+#else
+struct opt_pass *make_dump_call_graph_plugin_pass(void)
+{
+	return &dump_call_graph_plugin_pass.pass;
+}
+#endif
 
 int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
 {

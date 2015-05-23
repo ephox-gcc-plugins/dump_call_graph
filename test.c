@@ -31,5 +31,5 @@ static int __noinline fn_1(int argc)
 
 int main(int argc, char *argv[])
 {
-	return argc;
+	return fn_1(argc);
 }
