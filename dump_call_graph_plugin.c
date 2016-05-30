@@ -1,6 +1,6 @@
 /*
  * Copyright 2011-2015 by Emese Revfy <re.emese@gmail.com>
- * Licensed under the GPL v2, or (at your option) v3
+ * Licensed under the GPL v2
  *
  * Homepage:
  * http://www.grsecurity.net/~ephox/dump_call_graph_plugin/
